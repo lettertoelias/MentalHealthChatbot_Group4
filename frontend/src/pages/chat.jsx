@@ -6,129 +6,167 @@ import Bubble from "../components/ui/Bubble";
 import TypingIndicator from "../components/ui/TypingIndicator";
 import onKeyDown from "../helpers/onKeyDown";
 
-// paramaters needed: Prompt technique, Prompt Disabling, Disable Count
-// http://localhost:5173/?tech=socratic&count=-1
+
+import { 
+  normalizeTechnique,
+  nextIntentOf,
+  createMessagePayload,
+  validateMessagePayload,
+  appendUserTurn,
+  applyInboundAndAdvance
+} from "@/cbt/helpers";
 
 export default function Chat() {
   const params = new URLSearchParams(window.location.search);
-  const technique = (params.get("tech") ?? "baseline").toLowerCase();
+
+  // Technique disable logic
   const rawCount = params.get("count");
   const parsedCount = parseInt(rawCount ?? "", 10);
-  const maxDisableCount = Number.isFinite(parsedCount) ? parsedCount : 0; // -1 = never disable; 0 = disable immediately; >0 = disable after count messages
-  console.log("Technique:", technique, "Max disable count:", maxDisableCount);
-
+  const maxDisableCount = Number.isFinite(parsedCount) ? parsedCount : 0; // -1 never; 0 immediately; >0 after N
   const [currentCount, setCurrentCount] = useState(0);
 
-  const techniqueActive = (maxDisableCount === -1) || (currentCount < maxDisableCount);
-  const effectiveTechnique = techniqueActive ? technique : "baseline";
+  // Normalize technique; fallback handled inside normalizeTechnique
+  const technique = normalizeTechnique(params.get("tech"));
+  const isTechniqueActive = maxDisableCount === -1 || currentCount < maxDisableCount;
+  const effectiveTechnique = isTechniqueActive ? technique : "Baseline";
 
+  // Schema-shaped context
+  const [context, setContext] = useState([
+    {
+      role: "assistant",
+      text: "Hi! I'm here to help. How are you feeling today?",
+      timestamp: new Date().toISOString(),
+    },
+  ]);
+
+  // Intent pointers
+  const [identifiedIntent, setIdentifiedIntent] = useState("I1");
+  const [nextIntent, setNextIntent] = useState(nextIntentOf("I1"));
+
+  // UI state
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const listRef = useRef(null);
   const inputRef = useRef(null);
 
-  const [messages, setMessages] = useState([
-    { role: "assistant", content: "Hi! I'm here to help. How are you feeling today?", ts: Date.now() },
-  ]);
-
-  const [context, setContext] = useState(["Start of conversation."]);
-
-  console.log("Context: ", context);
-
-  // auto-scroll to bottom on new messages
   useEffect(() => {
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: "smooth" });
-  }, [messages]);
+  }, [context]);
 
-  // autosize textarea as you type
-  useEffect(() => {
-    if (!inputRef.current) return;
-    inputRef.current.style.height = "auto";
-    inputRef.current.style.height = `${Math.min(inputRef.current.scrollHeight, 160)}px`;
-  }, [text]);
+  // at top of Chat.jsx (helper)
+  function formatTime(iso) {
+    if (!iso) return "";
+    try {
+      const d = new Date(iso);
+      // e.g., "3:07 PM"
+      return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+    } catch {
+      return "";
+    }
+  }
 
-  const fmt = (t) => new Date(t).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  async function handleSend() {
+    const trimmed = text.trim();
+    if (!trimmed || busy) return;
 
-  async function send() {
-    const content = text.trim();
-    if (!content || busy) return;
-
-    const next = [...messages, { role: "user", content, ts: Date.now() }];
-    setMessages(next);
-    setText("");
     setBusy(true);
+    setText("");
+    setCurrentCount((c) => c + 1);
 
-    console.log("Context before send: ", context);
+    // 1) append user turn (tag with current intent)
+    const ctx1 = appendUserTurn(context, trimmed, identifiedIntent);
+    setContext(ctx1);
+
+    // 2) build schema-aligned payload
+    const payload = createMessagePayload({
+      message: trimmed,
+      effectiveTechnique,
+      context: ctx1,
+      identifiedIntent,
+      nextIntent: nextIntentOf(identifiedIntent),
+    });
+
+    // 3) validate against JSON Schema (AJV)
+    const { ok, errors } = validateMessagePayload(payload);
+    if (!ok) {
+      console.warn("Payload validation failed:", errors);
+      setBusy(false);
+      return;
+    }
 
     try {
-      const res = await fetch("http://localhost:8000/api/chat/", {
+      // 4) call your backend
+      const res = await fetch("http://localhost:8000/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message: content,
-          effectiveTechnique,
-          context,
-          intent: "i7",
-        })
+        body: JSON.stringify(payload),
       });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+      // Expected inbound shape: { reply, identifiedIntent?, nextIntent?, distortionIdentified? }
       const data = await res.json();
 
-      setMessages(m => [...m, { role: "assistant", content: data.reply }]);
-      setCurrentCount(c => c + 1);
-      setContext(prev => [...prev, `System: ${data.context}`]); 
+      // 5) guard inbound + advance via domain helper
+      const { advanced, identifiedIntent: id2, nextIntent: next2 } = applyInboundAndAdvance(payload, data);
+
+      // 6) hydrate UI
       
-    } catch (e) {
-      setMessages((m) => [...m, { role: "assistant", content: `❌ ${e.message}`, ts: Date.now() }]);
+      setContext(advanced.context);
+      setIdentifiedIntent(id2);
+      setNextIntent(next2);
+      console.log("Data: ", data);
+      console.log("Context: ", context);
+      console.log("Identified Intent: ", identifiedIntent);
+      console.log("Next Intent: ", nextIntent);
+    } catch (err) {
+      console.error("Send failed:", err);
+      setContext((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          text: "Sorry—something went wrong. Please try again.",
+          timestamp: new Date().toISOString(),
+        },
+      ]);
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(80%_60%_at_50%_-10%,hsl(var(--muted))/0.6,transparent_60%)]">
-      <div className="max-w-3xl mx-auto p-4 sm:p-6">
-        <Card className="h-[80vh] sm:h-[78vh] grid grid-rows-[auto_1fr_auto] overflow-hidden border shadow-sm">
-          {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b bg-background/70 backdrop-blur">
-            <div className="flex items-center gap-2">
-              <span className={`inline-block h-2.5 w-2.5 rounded-full ${busy ? "bg-amber-500" : "bg-emerald-500"}`} />
-              <div>
-                <div className="text-sm font-medium">Mental Health Chatbot</div>
-                <div className="text-xs text-muted-foreground">{busy ? "Assistant is typing…" : "Ready"}</div>
-              </div>
-            </div>
-          </div>
+    <div className="mx-auto max-w-3xl">
+      <Card className="p-4">
+        <div ref={listRef} className="h-[60vh] overflow-y-auto space-y-3 pb-3">
+          {context.map((m, i) => (
+            <Bubble
+              key={i}
+              role={m.role}
+              text={m.text}
+              time={formatTime(m.timestamp)} 
+            />
+          ))}
+          {busy && <TypingIndicator />}
+        </div>
 
-          {/* Messages */}
-          <div ref={listRef} className="overflow-y-auto px-3 sm:px-4 py-4 space-y-3 bg-background">
-            {messages.map((m, i) => (
-              <Bubble key={i} role={m.role} text={m.content} time={fmt(m.ts)} />
-            ))}
-            {busy && <TypingIndicator />}
-          </div>
+        <div className="mt-3 flex items-end gap-2">
+          <Textarea
+            ref={inputRef}
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={(e) => onKeyDown(e, handleSend)}
+            placeholder="Type your message…"
+            className="min-h-[90px]"
+          />
+          <Button onClick={handleSend} disabled={busy || !text.trim()}>
+            Send
+          </Button>
+        </div>
 
-          {/* Composer */}
-          <div className="border-t bg-background/80 backdrop-blur px-3 sm:px-4 py-3">
-            <div className="flex gap-2">
-              <Textarea
-                ref={inputRef}
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-                onKeyDown={(e) => onKeyDown(e, send)}
-                placeholder="Type your message… (Shift+Enter for newline)"
-                disabled={busy}
-                className="flex-1 min-h-[44px] max-h-40"
-              />
-              <Button onClick={send} disabled={busy || !text.trim()} className="self-end">
-                {busy ? "Sending…" : "Send"}
-              </Button>
-            </div>
-            <p className="mt-2 text-[11px] text-muted-foreground">
-              This tool does not replace professional help. If you're in crisis, contact local emergency services.
-            </p>
-          </div>
-        </Card>
-      </div>
+        <div className="mt-2 text-xs text-muted-foreground">
+          Technique: <b>{effectiveTechnique}</b> · Intent: <b>{identifiedIntent}</b> → Next:{" "}
+          <b>{nextIntent ?? "End"}</b>
+        </div>
+      </Card>
     </div>
   );
 }

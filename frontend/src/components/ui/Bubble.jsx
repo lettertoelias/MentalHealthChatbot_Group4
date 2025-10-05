@@ -1,3 +1,4 @@
+
 export default function Bubble({ role, text, time }) {
   const isUser = role === "user";
   const wrap = "max-w-[85%] sm:max-w-[70%] px-3 py-2 rounded-2xl text-sm shadow-sm whitespace-pre-wrap";
