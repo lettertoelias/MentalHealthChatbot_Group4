@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { ThemeProvider } from 'next-themes'
-import './globals.css'
 import { TooltipProvider } from '@/components/ui/tooltip'
+import './globals.css'
 
 export const metadata: Metadata = {
   title: 'Create Next App',
