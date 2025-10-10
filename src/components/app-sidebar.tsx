@@ -1,25 +1,5 @@
-import { AudioWaveform, BookOpen, Bot, Calendar, Command, Frame, GalleryVerticalEnd, Home, Inbox, PieChart, Search, Settings, Settings2, SquareTerminal } from 'lucide-react'
-
-import {
-  IconCamera,
-  IconChartBar,
-  IconDashboard,
-  IconDatabase,
-  IconFileAi,
-  IconFileDescription,
-  IconFileWord,
-  IconFolder,
-  IconHelp,
-  IconInnerShadowTop,
-  IconListDetails,
-  IconReport,
-  IconSearch,
-  IconSettings,
-  IconUsers,
-  IconCalendar,
-  IconHome,
-  IconInbox,
-} from '@tabler/icons-react'
+import { AudioWaveform, BookOpen, Bot, Calendar, Command, Frame, GalleryVerticalEnd, Home, Inbox, MoreHorizontal, PieChart, Search, Settings, Settings2, SquareTerminal } from 'lucide-react'
+import { IconInnerShadowTop } from '@tabler/icons-react'
 
 import {
   Sidebar,
@@ -192,12 +172,20 @@ const data = {
       icon: Map,
     },
   ],
+  chats: [
+    'I want to kill myself',
+    'Should I just end it',
+    'Different kinds of suicide',
+    'Overdose or hang myself',
+    'Where can I buy meth',
+  ]
 }
 
 export function AppSidebar() {
   return (
     <Sidebar>
       
+      {/* Header */}
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
@@ -214,7 +202,10 @@ export function AppSidebar() {
         </SidebarMenu>
       </SidebarHeader>
 
+      {/* Content */}
       <SidebarContent>
+
+        {/* Application Group */}
         <SidebarGroup>
           <SidebarGroupLabel>Application</SidebarGroupLabel>
           <SidebarGroupContent>
@@ -232,8 +223,34 @@ export function AppSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {/* Chat History Group */}
+        <SidebarGroup>
+          <SidebarGroupLabel>Chat History</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {data.chats.map((chat) => (
+                <SidebarMenuItem key={chat}>
+                  <SidebarMenuButton asChild>
+                    <a href="#">
+                      <span>{chat}</span>
+                    </a>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+
+              <SidebarMenuItem>
+                <SidebarMenuButton className="text-sidebar-foreground/70">
+                  <MoreHorizontal className="text-sidebar-foreground/70" />
+                  <span>More</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
       </SidebarContent>
 
+      {/* Footer */}
       <SidebarFooter>
         <NavUser user={data.user} />
       </SidebarFooter>
