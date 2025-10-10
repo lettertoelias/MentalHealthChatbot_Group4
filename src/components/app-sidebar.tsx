@@ -178,7 +178,7 @@ const data = {
     'Different kinds of suicide',
     'Overdose or hang myself',
     'Where can I buy meth',
-  ]
+  ],
 }
 
 export function AppSidebar() {
