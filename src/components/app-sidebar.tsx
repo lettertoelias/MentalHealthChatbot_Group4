@@ -183,7 +183,7 @@ const data = {
 
 export function AppSidebar() {
   return (
-    <Sidebar>
+    <Sidebar collapsible="icon">
       
       {/* Header */}
       <SidebarHeader>
@@ -225,7 +225,7 @@ export function AppSidebar() {
         </SidebarGroup>
 
         {/* Chat History Group */}
-        <SidebarGroup>
+        <SidebarGroup className="group-data-[collapsible=icon]:hidden">
           <SidebarGroupLabel>Chat History</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
