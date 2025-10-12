@@ -1,103 +1,109 @@
-import Image from "next/image";
-
-export default function Home() {
+"use client"
+import * as React from "react"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Send } from "lucide-react"
+const initialMessages = [
+  { id: 1, user: "Alex", message: "Hey team! How's the project going?", time: "10:00 AM", isMe: false },
+  { id: 2, user: "You", message: "Going great! Just finished the API integration", time: "10:02 AM", isMe: true },
+  { id: 3, user: "Sarah", message: "Nice work! I'm wrapping up the UI components", time: "10:03 AM", isMe: false },
+  { id: 4, user: "You", message: "Perfect, should we sync up later today?", time: "10:05 AM", isMe: true },
+  { id: 5, user: "Alex", message: "Sounds good. How about 2 PM?", time: "10:06 AM", isMe: false },
+  { id: 6, user: "Sarah", message: "Works for me! 👍", time: "10:07 AM", isMe: false },
+  { id: 7, user: "You", message: "Great, see you both then", time: "10:08 AM", isMe: true },
+  { id: 8, user: "Alex", message: "Just pushed my changes to the staging branch", time: "11:30 AM", isMe: false },
+  { id: 9, user: "Sarah", message: "Reviewing now...", time: "11:32 AM", isMe: false },
+  { id: 10, user: "You", message: "I'll test it after lunch", time: "11:35 AM", isMe: true },
+]
+export default function ScrollAreaChat() {
+  const [messages, setMessages] = React.useState(initialMessages)
+  const [input, setInput] = React.useState("")
+  const scrollRef = React.useRef<HTMLDivElement>(null)
+  React.useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight
+    }
+  }, [messages])
+  const sendMessage = () => {
+    if (input.trim()) {
+      const newMessage = {
+        id: messages.length + 1,
+        user: "You",
+        message: input,
+        time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+        isMe: true
+      }
+      setMessages([...messages, newMessage])
+      setInput("")
+    }
+  }
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+    // <div 
+    //   className="flex justify-center self-start pt-6 w-full" 
+    //   style={{ 
+    //     all: 'revert',
+    //     display: 'flex',
+    //     justifyContent: 'center',
+    //     alignSelf: 'flex-start',
+    //     paddingTop: '1.5rem',
+    //     width: '100%',
+    //     fontSize: '14px',
+    //     lineHeight: '1.5',
+    //     letterSpacing: 'normal'
+    //   }}
+    // >
+    // </div>
+    <div className="w-full h-screen max-w-md border rounded-lg">
+      <div className="border-b p-3">
+        <h3 className="font-semibold">Team Chat</h3>
+      </div>
+      <ScrollArea className="h-screen p-4" ref={scrollRef}>
+        <div className="space-y-4">
+          {messages.map((msg) => (
+            <div
+              key={msg.id}
+              className={`flex gap-3 ${msg.isMe ? 'flex-row-reverse' : ''}`}
+            >
+              <Avatar className="h-8 w-8">
+                <AvatarFallback>
+                  {msg.user[0]}
+                </AvatarFallback>
+              </Avatar>
+              <div className={`flex flex-col gap-1 ${msg.isMe ? 'items-end' : ''}`}>
+                <div className={`rounded-lg px-3 py-2 max-w-[250px] ${
+                  msg.isMe 
+                    ? 'bg-primary text-primary-foreground' 
+                    : 'bg-muted'
+                }`}>
+                  <p className="text-sm">{msg.message}</p>
+                </div>
+                <span className="text-xs text-muted-foreground">{msg.time}</span>
+              </div>
+            </div>
+          ))}
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
+      </ScrollArea>
+      <div className="border-t p-3">
+        <form 
+          onSubmit={(e) => {
+            e.preventDefault()
+            sendMessage()
+          }}
+          className="flex gap-2"
         >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
+          <Input
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Type a message..."
+            className="flex-1"
           />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+          <Button type="submit" size="icon">
+            <Send className="h-4 w-4" />
+          </Button>
+        </form>
+      </div>
     </div>
-  );
+  )
 }
