@@ -64,7 +64,7 @@ export default function ScrollAreaChat() {
                 </Avatar>
                 <div className={`flex flex-col gap-1 ${msg.user === "You" ? "items-end" : ""}`}>
                   <div
-                    className={`rounded-lg px-3 py-2 max-w-[250px] ${
+                    className={`rounded-lg px-3 py-2 max-w-[100rem] ${
                       msg.user === "You"
                         ? "bg-primary text-primary-foreground"
                         : "bg-muted"
